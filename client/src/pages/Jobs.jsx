@@ -61,9 +61,11 @@ function Jobs() {
         params.append("page", page)
         params.append("limit", 9)
 
-        const response = await axios.get(
-          `http://127.0.0.1:8000/api/jobs?${params.toString()}`
-        )
+       const API_URL = import.meta.env.VITE_API_URL
+
+const response = await axios.get(
+  `${API_URL}/api/jobs?${params.toString()}`
+)
 
         setJobs(response.data.jobs || [])
         setTotalJobs(response.data.totalJobs || 0)
