@@ -1,14 +1,18 @@
-const axios = require("axios")
-
 const Job = require("../models/Job")
+
 const CandidateProfile = require("../models/CandidateProfile")
 
 const {
   calculateKeywordMatch
 } = require("../utils/jobMatcher")
 
+const {
+  calculateSemanticSkillMatch
+} = require("../utils/semanticMatcher")
+
 
 const getRecommendedJobs = async (req, res) => {
+
   try {
 
     // =====================================================
@@ -19,18 +23,26 @@ const getRecommendedJobs = async (req, res) => {
       userId: req.userId
     })
 
+
     if (!profile) {
+
       return res.status(404).json({
         message: "Please upload your resume first"
       })
+
     }
 
-    const candidateSkills = profile.skills || []
+
+    const candidateSkills =
+      profile.skills || []
+
 
     if (candidateSkills.length === 0) {
+
       return res.status(400).json({
         message: "No skills were detected in your resume"
       })
+
     }
 
 
@@ -39,79 +51,234 @@ const getRecommendedJobs = async (req, res) => {
     // =====================================================
 
     const jobs = await Job.find({
+
       isActive: true,
+
       $or: [
+
         {
           expiresAt: null
         },
+
         {
           expiresAt: {
             $gt: new Date()
           }
         }
+
       ]
+
     }).sort({
+
       postedAt: -1
+
     })
 
+
     if (jobs.length === 0) {
+
       return res.json({
+
         count: 0,
+
         recommendations: []
+
       })
+
     }
 
 
     // =====================================================
-    // Calculate Recommendations
+    // Step 1: Keyword Matching
+    // Fast local calculation for all jobs
+    // =====================================================
+
+    const keywordRecommendations =
+      jobs.map(job => {
+
+        const keywordResult =
+          calculateKeywordMatch(
+            candidateSkills,
+            job.skills || []
+          )
+
+
+        return {
+
+          job,
+
+          keywordResult,
+
+          keywordScore:
+            keywordResult.score || 0
+
+        }
+
+      })
+
+
+    // =====================================================
+    // Step 2: Select Top Candidates
+    // Only these jobs use Gemini semantic matching
+    // =====================================================
+
+    const semanticCandidates =
+      [...keywordRecommendations]
+        .sort(
+          (a, b) =>
+            b.keywordScore -
+            a.keywordScore
+        )
+        .slice(0, 5)
+
+
+    // =====================================================
+    // Step 3: Calculate Semantic Matching
+    // Only for top 5 keyword matches
+    // =====================================================
+
+    const semanticResults =
+      new Map()
+
+
+    for (
+      const item of semanticCandidates
+    ) {
+
+      const job =
+        item.job
+
+
+      try {
+
+        const semanticResult =
+          await calculateSemanticSkillMatch(
+
+            candidateSkills,
+
+            job.skills || []
+
+          )
+
+
+        semanticResults.set(
+
+          job._id.toString(),
+
+          {
+
+            score:
+              semanticResult.score || 0,
+
+            matchedSkills:
+              semanticResult.matchedSkills || [],
+
+            missingSkills:
+              semanticResult.missingSkills || []
+
+          }
+
+        )
+
+      } catch (error) {
+
+        console.error(
+
+          `Semantic matching failed for ${job.title}:`,
+
+          error.message
+
+        )
+
+
+        // Fall back to keyword score
+        // if Gemini is temporarily unavailable.
+
+        semanticResults.set(
+
+          job._id.toString(),
+
+          {
+
+            score:
+              item.keywordScore,
+
+            matchedSkills:
+              item.keywordResult.matchedSkills || [],
+
+            missingSkills:
+              item.keywordResult.missingSkills || []
+
+          }
+
+        )
+
+      }
+
+    }
+
+
+    // =====================================================
+    // Step 4: Calculate Final Recommendations
     // =====================================================
 
     const recommendations = []
 
 
-    for (const job of jobs) {
+    for (
+      const item of keywordRecommendations
+    ) {
 
-      // ---------------------------------------------------
-      // Keyword Matching
-      // ---------------------------------------------------
+      const job =
+        item.job
+
 
       const keywordResult =
-        calculateKeywordMatch(
-          candidateSkills,
-          job.skills || []
+        item.keywordResult
+
+
+      const keywordScore =
+        item.keywordScore
+
+
+      const semanticResult =
+        semanticResults.get(
+          job._id.toString()
         )
 
-
-      // ---------------------------------------------------
-      // Semantic Skill Matching
-      // ---------------------------------------------------
 
       let semanticScore = 0
 
-      try {
+      let semanticMatchedSkills = []
 
-        const semanticResponse =
-          await axios.post(
-            "http://127.0.0.1:8000/semantic-skill-match",
-            {
-              resume_skills: candidateSkills,
-              job_skills: job.skills || []
-            }
-          )
+      let semanticMissingSkills = []
+
+
+      if (semanticResult) {
 
         semanticScore =
-          semanticResponse.data.score || 0
+          semanticResult.score || 0
 
-      } catch (error) {
+        semanticMatchedSkills =
+          semanticResult.matchedSkills || []
 
-        console.error(
-          `Semantic matching failed for ${job.title}:`,
-          error.message
-        )
+        semanticMissingSkills =
+          semanticResult.missingSkills || []
 
-        // If AI service is unavailable,
-        // keyword score remains available.
-        semanticScore = keywordResult.score
+      } else {
+
+        // Jobs outside top 5 use keyword
+        // score as their semantic fallback.
+
+        semanticScore =
+          keywordScore
+
+        semanticMatchedSkills =
+          keywordResult.matchedSkills || []
+
+        semanticMissingSkills =
+          keywordResult.missingSkills || []
+
       }
 
 
@@ -119,15 +286,17 @@ const getRecommendedJobs = async (req, res) => {
       // Combined Recommendation Score
       // ---------------------------------------------------
 
-      const keywordScore =
-        keywordResult.score || 0
-
       const recommendationScore =
         Math.round(
+
           (
+
             keywordScore * 0.4 +
+
             semanticScore * 0.6
+
           ) * 100
+
         ) / 100
 
 
@@ -135,14 +304,35 @@ const getRecommendedJobs = async (req, res) => {
       // Recommendation Label
       // ---------------------------------------------------
 
-      let matchLabel = "Potential Match"
+      let matchLabel =
+        "Potential Match"
 
-      if (recommendationScore >= 80) {
-        matchLabel = "Strong Match"
-      } else if (recommendationScore >= 60) {
-        matchLabel = "Good Match"
-      } else if (recommendationScore >= 40) {
-        matchLabel = "Partial Match"
+
+      if (
+        recommendationScore >= 80
+      ) {
+
+        matchLabel =
+          "Strong Match"
+
+      }
+
+      else if (
+        recommendationScore >= 60
+      ) {
+
+        matchLabel =
+          "Good Match"
+
+      }
+
+      else if (
+        recommendationScore >= 40
+      ) {
+
+        matchLabel =
+          "Partial Match"
+
       }
 
 
@@ -153,35 +343,77 @@ const getRecommendedJobs = async (req, res) => {
       recommendations.push({
 
         job: {
-          _id: job._id,
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          jobType: job.jobType,
-          experience: job.experience,
-          skills: job.skills,
-          description: job.description,
-          applyLink: job.applyLink,
-          source: job.source,
-          postedAt: job.postedAt
+
+          _id:
+            job._id,
+
+          title:
+            job.title,
+
+          company:
+            job.company,
+
+          location:
+            job.location,
+
+          jobType:
+            job.jobType,
+
+          experience:
+            job.experience,
+
+          skills:
+            job.skills,
+
+          description:
+            job.description,
+
+          applyLink:
+            job.applyLink,
+
+          source:
+            job.source,
+
+          postedAt:
+            job.postedAt
+
         },
+
 
         recommendationScore,
 
         matchLabel,
 
+
         keywordMatching: {
-          score: keywordScore,
+
+          score:
+            keywordScore,
+
           matchedSkills:
             keywordResult.matchedSkills || [],
+
           missingSkills:
             keywordResult.missingSkills || []
+
         },
 
+
         semanticMatching: {
-          score: semanticScore
+
+          score:
+            semanticScore,
+
+          matchedSkills:
+            semanticMatchedSkills,
+
+          missingSkills:
+            semanticMissingSkills
+
         }
+
       })
+
     }
 
 
@@ -190,9 +422,13 @@ const getRecommendedJobs = async (req, res) => {
     // =====================================================
 
     recommendations.sort(
+
       (a, b) =>
+
         b.recommendationScore -
+
         a.recommendationScore
+
     )
 
 
@@ -201,25 +437,43 @@ const getRecommendedJobs = async (req, res) => {
     // =====================================================
 
     res.json({
-      count: recommendations.length,
+
+      count:
+        recommendations.length,
+
       recommendations
+
     })
+
 
   } catch (error) {
 
     console.error(
+
       "Recommendation error:",
+
       error
+
     )
 
+
     res.status(500).json({
-      message: "Failed to generate recommendations",
-      error: error.message
+
+      message:
+        "Failed to generate recommendations",
+
+      error:
+        error.message
+
     })
+
   }
+
 }
 
 
 module.exports = {
+
   getRecommendedJobs
+
 }

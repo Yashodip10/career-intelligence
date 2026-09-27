@@ -1,5 +1,4 @@
 fastapi
 uvicorn[standard]
-sentence-transformers
-scikit-learn
+fastembed
 numpy

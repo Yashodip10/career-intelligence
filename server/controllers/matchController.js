@@ -1,11 +1,14 @@
-const axios = require("axios")
-
 const Resume = require("../models/Resume")
 const Job = require("../models/Job")
 
 const {
   calculateKeywordMatch
 } = require("../utils/jobMatcher")
+
+const {
+  calculateSemanticTextMatch,
+  calculateSemanticSkillMatch
+} = require("../utils/semanticMatcher")
 
 
 const matchResumeWithJob = async (req, res) => {
@@ -91,22 +94,11 @@ const matchResumeWithJob = async (req, res) => {
     // 2. Whole Resume Semantic Matching
     // =========================================
 
-    const semanticResponse =
-      await axios.post(
-        "http://127.0.0.1:8000/semantic-match",
-        {
-          resume_text: resume.rawText,
-          job_text: job.description
-        }
-      )
-
-
-    const semanticResult =
-      semanticResponse.data
-
-
     const semanticScore =
-      semanticResult.score
+      await calculateSemanticTextMatch(
+        resume.rawText,
+        job.description
+      )
 
 
     // =========================================
@@ -202,7 +194,7 @@ const matchResumeWithJob = async (req, res) => {
 
         semanticReason =
           `Your resume demonstrates strong alignment with this ${job.title} role. The required technical skills are present and the overall resume content is relevant to the responsibilities described in the job.`
-      
+
       } else {
 
         semanticReason =
@@ -333,18 +325,11 @@ const matchResumeWithJob = async (req, res) => {
     // 3. Semantic Skill Matching
     // =========================================
 
-    const semanticSkillResponse =
-      await axios.post(
-        "http://127.0.0.1:8000/semantic-skill-match",
-        {
-          resume_skills: resumeSkills,
-          job_skills: jobSkills
-        }
-      )
-
-
     const semanticSkillResult =
-      semanticSkillResponse.data
+      await calculateSemanticSkillMatch(
+        resumeSkills,
+        jobSkills
+      )
 
 
     const semanticSkillScore =
@@ -477,6 +462,7 @@ const matchResumeWithJob = async (req, res) => {
     })
 
   }
+
 
   catch (error) {
 

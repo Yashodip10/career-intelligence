@@ -1,12 +1,14 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
+from fastembed import TextEmbedding
+import numpy as np
 
 app = FastAPI()
 
-# Load the pretrained sentence-transformer model
-model = SentenceTransformer("all-MiniLM-L6-v2")
+# Load lightweight ONNX embedding model
+model = TextEmbedding(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
 
 
 # ==========================================
@@ -35,29 +37,48 @@ def home():
 
 
 # ==========================================
+# Helper
+# ==========================================
+
+def cosine_similarity(vector_a, vector_b):
+    vector_a = np.array(vector_a)
+    vector_b = np.array(vector_b)
+
+    denominator = (
+        np.linalg.norm(vector_a) *
+        np.linalg.norm(vector_b)
+    )
+
+    if denominator == 0:
+        return 0.0
+
+    return float(
+        np.dot(vector_a, vector_b) / denominator
+    )
+
+
+# ==========================================
 # Semantic Resume Matching
 # ==========================================
 
 @app.post("/semantic-match")
 def semantic_match(data: SemanticMatchRequest):
 
-    resume_embedding = model.encode(
-        [data.resume_text],
-        normalize_embeddings=True
-    )
+    resume_embedding = list(
+        model.embed([data.resume_text])
+    )[0]
 
-    job_embedding = model.encode(
-        [data.job_text],
-        normalize_embeddings=True
-    )
+    job_embedding = list(
+        model.embed([data.job_text])
+    )[0]
 
     similarity = cosine_similarity(
         resume_embedding,
         job_embedding
-    )[0][0]
+    )
 
     score = round(
-        float(similarity) * 100,
+        similarity * 100,
         2
     )
 
@@ -83,7 +104,6 @@ def semantic_skill_match(
     # --------------------------------------
 
     if not resume_skills or not job_skills:
-
         return {
             "score": 0,
             "matchedSkills": [],
@@ -91,69 +111,52 @@ def semantic_skill_match(
             "missingSkills": job_skills
         }
 
-
     # --------------------------------------
     # Create embeddings
     # --------------------------------------
 
-    resume_embeddings = model.encode(
-        resume_skills,
-        normalize_embeddings=True
+    resume_embeddings = list(
+        model.embed(resume_skills)
     )
 
-    job_embeddings = model.encode(
-        job_skills,
-        normalize_embeddings=True
+    job_embeddings = list(
+        model.embed(job_skills)
     )
-
 
     # --------------------------------------
-    # Calculate similarity matrix
+    # Find semantic matches
     # --------------------------------------
-
-    similarity_matrix = cosine_similarity(
-        resume_embeddings,
-        job_embeddings
-    )
-
 
     matched_skills = []
     related_skills = []
-
     matched_job_indexes = set()
-
-
-    # --------------------------------------
-    # Find best semantic match
-    # for every resume skill
-    # --------------------------------------
 
     for resume_index, resume_skill in enumerate(
         resume_skills
     ):
 
-        best_job_index = int(
-            similarity_matrix[
-                resume_index
-            ].argmax()
-        )
+        best_job_index = -1
+        best_similarity = -1.0
 
-        best_similarity = float(
-            similarity_matrix[
-                resume_index,
-                best_job_index
-            ]
-        )
+        for job_index, job_embedding in enumerate(
+            job_embeddings
+        ):
 
-        job_skill = job_skills[
-            best_job_index
-        ]
+            similarity = cosine_similarity(
+                resume_embeddings[resume_index],
+                job_embedding
+            )
+
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_job_index = job_index
+
+        job_skill = job_skills[best_job_index]
 
         similarity_percentage = round(
             best_similarity * 100,
             2
         )
-
 
         # ----------------------------------
         # Strong / exact semantic match
@@ -171,7 +174,6 @@ def semantic_skill_match(
                 best_job_index
             )
 
-
         # ----------------------------------
         # Related semantic skill
         # ----------------------------------
@@ -188,9 +190,8 @@ def semantic_skill_match(
                 best_job_index
             )
 
-
     # --------------------------------------
-    # Find job skills not matched
+    # Find missing job skills
     # --------------------------------------
 
     missing_skills = []
@@ -200,11 +201,7 @@ def semantic_skill_match(
     ):
 
         if index not in matched_job_indexes:
-
-            missing_skills.append(
-                job_skill
-            )
-
+            missing_skills.append(job_skill)
 
     # --------------------------------------
     # Calculate semantic skill score
@@ -221,7 +218,6 @@ def semantic_skill_match(
         ) * 100,
         2
     )
-
 
     # --------------------------------------
     # Return result
