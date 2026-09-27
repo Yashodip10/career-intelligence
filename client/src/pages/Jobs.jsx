@@ -62,7 +62,7 @@ function Jobs() {
         params.append("page", page)
         params.append("limit", 9)
 
-       const API_URL = import.meta.env.VITE_API_URL
+      
 
 const response = await axios.get(
   `${API_URL}/api/jobs?${params.toString()}`
