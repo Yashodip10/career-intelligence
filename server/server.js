@@ -15,12 +15,17 @@ const adminCandidateRoutes = require("./routes/adminCandidateRoutes")
 const candidateProfileRoutes = require("./routes/candidateProfileRoutes")
 const applicationRoutes = require("./routes/applicationRoutes")
 const app = express()
-
+const fs = require("fs")
+const path = require("path")
 // Connect to MongoDB
 connectDB()
 
 // Middleware
+const uploadsDir = path.join(__dirname, "uploads")
 
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true })
+}
 app.use(cors())
 app.use(express.json())
 app.use("/api/auth", authRoutes)
