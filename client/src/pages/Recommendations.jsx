@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
 import { Link } from "react-router-dom"
+import { API_URL } from "../config"
 
 function Recommendations() {
   const [recommendations, setRecommendations] = useState([])
@@ -20,7 +21,7 @@ function Recommendations() {
 
       try {
         const response = await axios.get(
-          "http://127.0.0.1:8000/api/recommendations",
+          `${API_URL}/api/recommendations` ,
           {
             headers: {
               Authorization: `Bearer ${token}`

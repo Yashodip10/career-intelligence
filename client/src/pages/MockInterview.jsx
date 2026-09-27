@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import axios from "axios"
+import { API_URL } from "../config"
 
 function MockInterview() {
   const location = useLocation()
@@ -85,7 +86,7 @@ function MockInterview() {
       const token = localStorage.getItem("token")
 
       const response = await axios.post(
-        `http://127.0.0.1:8000/api/interviews/${interview.id}/submit`,
+        `${API_URL}/api/interviews/${interview.id}/submit`,
         {
           answers: formattedAnswers
         },

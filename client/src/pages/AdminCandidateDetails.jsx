@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import axios from "axios"
+import { API_URL } from "../config"
 
 function AdminCandidateDetails() {
   const { id } = useParams()
@@ -25,7 +26,7 @@ function AdminCandidateDetails() {
       setError("")
 
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/admin/candidates/${id}`,
+        `${API_URL}/api/admin/candidates/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`

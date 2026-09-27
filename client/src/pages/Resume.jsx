@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
+import { API_URL } from "../config"
 
 function Resume() {
   const [resume, setResume] = useState(null)
@@ -21,7 +22,7 @@ function Resume() {
       const token = localStorage.getItem("token")
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/api/resumes/me",
+        `${API_URL}/api/resumes/me`,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -98,7 +99,7 @@ function Resume() {
       formData.append("resume", selectedFile)
 
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/resumes/upload",
+        `${API_URL}/api/resumes/upload`,
         formData,
         {
           headers: {

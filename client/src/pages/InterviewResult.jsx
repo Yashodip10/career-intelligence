@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom"
 import axios from "axios"
+import { API_URL } from "../config"
 import { useState } from "react"
 
 function InterviewResult() {
@@ -60,7 +61,7 @@ function InterviewResult() {
       const token = localStorage.getItem("token")
 
       const response = await axios.post(
-        `http://127.0.0.1:8000/api/interviews/start/${result.job.id}`,
+        `${API_URL}/api/interviews/start/${result.job.id}`,
         {},
         {
           headers: {

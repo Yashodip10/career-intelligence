@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import axios from "axios"
-
+import { API_URL } from "../config"
 function AdminCandidates() {
   const [candidates, setCandidates] = useState([])
 
@@ -30,7 +30,7 @@ function AdminCandidates() {
   const fetchCandidates = async () => {
     try {
       const response = await axios.get(
-        "http://127.0.0.1:8000/api/admin/candidates",
+        `${API_URL}/api/admin/candidates`,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -52,8 +52,7 @@ function AdminCandidates() {
   const fetchStats = async () => {
     try {
       const response = await axios.get(
-        "http://127.0.0.1:8000/api/admin/candidates/stats",
-        {
+`${API_URL}/api/admin/candidates/stats`,        {
           headers: {
             Authorization: `Bearer ${token}`
           }

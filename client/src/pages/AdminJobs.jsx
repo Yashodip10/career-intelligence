@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
+import { API_URL } from "../config"
 
 function AdminJobs() {
   const [jobs, setJobs] = useState([])
@@ -53,8 +54,7 @@ function AdminJobs() {
       const token = getToken()
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/api/jobs/admin",
-        {
+`${API_URL}/api/jobs/admin`,        {
           params: {
             search,
             status
@@ -197,7 +197,7 @@ function AdminJobs() {
 
       if (editingJob) {
         await axios.put(
-          `http://127.0.0.1:8000/api/jobs/${editingJob._id}`,
+          `${API_URL}/api/jobs/${editingJob._id}`,
           jobData,
           {
             headers: {
@@ -207,7 +207,7 @@ function AdminJobs() {
         )
       } else {
         await axios.post(
-          "http://127.0.0.1:8000/api/jobs",
+         `${API_URL}/api/jobs` ,
           jobData,
           {
             headers: {
@@ -245,7 +245,7 @@ function AdminJobs() {
       const token = getToken()
 
       await axios.patch(
-        `http://127.0.0.1:8000/api/jobs/${job._id}/toggle`,
+       `${API_URL}/api/jobs/${job._id}/toggle` ,
         {},
         {
           headers: {
@@ -285,7 +285,7 @@ function AdminJobs() {
       const token = getToken()
 
       await axios.delete(
-        `http://127.0.0.1:8000/api/jobs/${job._id}`,
+        `${API_URL}/api/jobs/${job._id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
+import { API_URL } from "../config"
 import {
   useParams,
   useNavigate,
@@ -45,7 +46,7 @@ function JobDetails() {
         setLoading(true)
 
         const response = await axios.get(
-          `http://127.0.0.1:8000/api/jobs/${id}`
+          `${API_URL}/api/jobs/${id}`
         )
 
         setJob(response.data.job)
@@ -72,8 +73,7 @@ function JobDetails() {
 
       try {
         const response = await axios.get(
-          `http://127.0.0.1:8000/api/applications/job/${id}`,
-          {
+`${API_URL}/api/applications/job/${id}`,          {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -125,7 +125,7 @@ function JobDetails() {
       setApplicationError("")
 
       const response = await axios.post(
-        `http://127.0.0.1:8000/api/applications/${id}`,
+        `${API_URL}/api/applications/${id}`,
         {},
         {
           headers: {
@@ -179,7 +179,7 @@ function JobDetails() {
       setMatchError("")
 
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/matches/job/${id}`,
+       `${API_URL}/api/matches/job/${id}` ,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -215,7 +215,7 @@ function JobDetails() {
       setImprovementError("")
 
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/improvements/job/${id}`,
+       `${API_URL}/api/improvements/job/${id}` ,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -251,7 +251,7 @@ function JobDetails() {
       setError("")
 
       const response = await axios.post(
-        `http://127.0.0.1:8000/api/interviews/start/${id}`,
+        `${API_URL}/api/interviews/start/${id}`,
         {},
         {
           headers: {
