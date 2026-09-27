@@ -18,6 +18,8 @@ import AdminCandidates from "./pages/AdminCandidates"
 import AdminCandidateDetails from "./pages/AdminCandidateDetails"
 
 import ProtectedRoute from "./components/ProtectedRoute"
+import MyApplications from "./pages/MyApplications"
+import MyInterviews from "./pages/MyInterviews"
 
 
 function HomePage() {
@@ -53,6 +55,14 @@ function App() {
           element={<HomePage />}
         />
 
+<Route
+  path="/my-applications"
+  element={
+    <ProtectedRoute userOnly>
+      <MyApplications />
+    </ProtectedRoute>
+  }
+/>
 
         {/* ============================================
             Public / Candidate Jobs
@@ -134,6 +144,32 @@ function App() {
           }
         />
 
+<Route
+  path="/my-interviews"
+  element={
+    <ProtectedRoute userOnly>
+      <MyInterviews />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/my-applications"
+  element={
+    <ProtectedRoute userOnly>
+      <MyApplications />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/my-interviews"
+  element={
+    <ProtectedRoute userOnly>
+      <MyInterviews />
+    </ProtectedRoute>
+  }
+/>
 
         {/* ============================================
             Admin Dashboard

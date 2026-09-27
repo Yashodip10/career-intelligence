@@ -153,6 +153,20 @@ function Navbar() {
                   Resume
                 </NavLink>
 
+                <NavLink
+                  to="/my-applications"
+                  active={isActive("/my-applications")}
+                >
+                  Applications
+                </NavLink>
+
+                <NavLink
+                  to="/my-interviews"
+                  active={isActive("/my-interviews")}
+                >
+                  Interviews
+                </NavLink>
+
                 <UserBadge
                   user={user}
                 />
@@ -363,6 +377,26 @@ function Navbar() {
                   My Resume
                 </MobileNavLink>
 
+                <MobileNavLink
+                  to="/my-applications"
+                  active={isActive("/my-applications")}
+                  onClick={() =>
+                    setMenuOpen(false)
+                  }
+                >
+                  My Applications
+                </MobileNavLink>
+
+                <MobileNavLink
+                  to="/my-interviews"
+                  active={isActive("/my-interviews")}
+                  onClick={() =>
+                    setMenuOpen(false)
+                  }
+                >
+                  My Interviews
+                </MobileNavLink>
+
                 <div className="border-t border-slate-100 mt-2 pt-3">
 
                   <div className="flex items-center px-3 py-2">
@@ -503,5 +537,6 @@ function LogoutButton({
     </button>
   )
 }
+
 
 export default Navbar

@@ -2,7 +2,8 @@ const express = require("express")
 
 const {
   startInterview,
-  submitInterview
+  submitInterview,
+  getMyInterviews
 } = require("../controllers/interviewController")
 
 const protect = require("../middleware/authMiddleware")
@@ -17,6 +18,13 @@ router.post(
   startInterview
 )
 
+// Get completed interviews of logged-in candidate
+
+router.get(
+  "/my",
+  protect,
+  getMyInterviews
+)
 
 // Submit answers and evaluate the interview
 router.post(

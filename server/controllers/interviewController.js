@@ -94,7 +94,9 @@ const startInterview = async (req, res) => {
         questions: interview.questions
       }
     })
+
   } catch (error) {
+
     console.error(
       "Start interview error:",
       error.message
@@ -114,7 +116,9 @@ const startInterview = async (req, res) => {
 
 const submitInterview = async (req, res) => {
   try {
+
     const { interviewId } = req.params
+
     const { answers = [] } = req.body
 
     const interview = await Interview.findOne({
@@ -165,6 +169,7 @@ const submitInterview = async (req, res) => {
             (item) =>
               item.questionIndex === index
           )?.answer?.trim() || ""
+
 
         const result =
           evaluation.results?.find(
@@ -252,15 +257,20 @@ const submitInterview = async (req, res) => {
     // ------------------------------------------
 
     if (interview.questions.length > 0) {
+
       totalScore =
         totalScore /
         interview.questions.length
+
     } else {
+
       totalScore = 0
     }
 
+
     totalScore =
       Math.round(totalScore * 10) / 10
+
 
     interview.totalScore = totalScore
 
@@ -272,9 +282,11 @@ const submitInterview = async (req, res) => {
     // ------------------------------------------
 
     res.json({
+
       message: "Interview evaluated successfully",
 
       interview: {
+
         id: interview._id,
 
         job: {
@@ -299,14 +311,117 @@ const submitInterview = async (req, res) => {
     )
 
     res.status(500).json({
+
       message: "Failed to evaluate interview",
+
       error: error.message
     })
   }
 }
 
 
+// ==========================================
+// GET MY COMPLETED INTERVIEWS
+// ==========================================
+
+const getMyInterviews = async (req, res) => {
+
+  try {
+
+    const interviews = await Interview.find({
+
+      userId: req.userId,
+
+      totalScore: {
+        $ne: null
+      }
+
+    })
+      .populate(
+        "jobId",
+        "title company location jobType experience"
+      )
+      .sort({
+        createdAt: -1
+      })
+
+
+    const formattedInterviews =
+      interviews.map((interview) => ({
+
+        _id: interview._id,
+
+        jobId:
+          interview.jobId?._id || null,
+
+        jobTitle:
+          interview.jobId?.title ||
+          "AI Mock Interview",
+
+        company:
+          interview.jobId?.company ||
+          "",
+
+        location:
+          interview.jobId?.location ||
+          "",
+
+        jobType:
+          interview.jobId?.jobType ||
+          "",
+
+        experience:
+          interview.jobId?.experience ||
+          "",
+
+        totalScore:
+          interview.totalScore,
+
+        createdAt:
+          interview.createdAt
+
+      }))
+
+
+    res.json({
+
+      count:
+        formattedInterviews.length,
+
+      interviews:
+        formattedInterviews
+
+    })
+
+  } catch (error) {
+
+    console.error(
+      "Get my interviews error:",
+      error.message
+    )
+
+    res.status(500).json({
+
+      message:
+        "Failed to load interview history.",
+
+      error:
+        error.message
+    })
+  }
+}
+
+
+// ==========================================
+// EXPORT CONTROLLERS
+// ==========================================
+
 module.exports = {
+
   startInterview,
-  submitInterview
+
+  submitInterview,
+
+  getMyInterviews
+
 }
